@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Inventory Dashboard (Credentials Control)</title>
+    <style>
+        :root {
+            --bg-main: #f4f6f9;
+            --bg-card: white;
+            --bg-sidebar: #0f172a;
+            --bg-sidebar-hover: #1e293b;
+            --text-main: #111111;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --table-header: #0f172a;
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-sidebar: #020617;
+            --bg-sidebar-hover: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --table-header: #1e293b;
+        }
+
+        *{ margin:0; padding:0; box-sizing:border-box; }
+
+        body{
+            font-family:Arial, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            color: #0f172a;
+        }
+
+        .login-box h2 { margin-bottom: 5px; text-align: center; }
+        .login-box p { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 20px; }
+        .login-box .form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;}
+        .login-box input { padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;}
+        .login-btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px;}
+        .login-btn:hover { background: #1d4ed8; }
+        #login-error { color: #ef4444; font-size: 14px; margin-top: 10px; text-align: center; display: none; }
+
+        .container{ display: flex; }
+
+        .sidebar{
+            width:250px;
+            background: var(--bg-sidebar);
+            color:white;
+            min-height:100vh;
+            padding:20px;
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar h2{ margin-bottom:5px; text-align:center; }
+
+        .sidebar-role-badge {
+            text-align: center;
+            font-size: 12px;
+            background: #2563eb;
+            padding: 3px 8px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            font-weight: bold;
+            display: inline-block;
+            align-self: center;
+        }
+
+        .sidebar ul{ list-style:none; }
+
+        .sidebar ul li{
+            padding:15px;
+            margin-bottom:10px;
+            background: var(--bg-sidebar-hover);
+            border-radius:10px;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        .sidebar ul li:hover, .sidebar ul li.active{ background:#2563eb; }
+
+        .btn-logout {
+            padding: 12px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            margin-top: auto;
+        }
+        .btn-logout:hover { background: #dc2626; }
+
+        .main-content{ flex:1; padding:20px; margin-left:250px; }
+
+        .page-view { display: none; }
+        .page-view.active-view { display: block; }
+
+        .topbar{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:30px;
+            gap: 15px;
+        }
+
+        .topbar-actions { display: flex; align-items: center; gap: 15px; }
+
+        .topbar input{
+            padding:10px;
+            border: 1px solid var(--border-color);
+            border-radius:8px;
+            width:250px;
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .btn-theme-toggle {
+            padding: 10px 15px;
+            background: var(--bg-sidebar-hover);
+            color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-excel {
+            background: #16a34a !important;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-excel:hover { background: #15803d !important; }
+
+        .cards{
+            display:grid;
+            grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
+            gap:20px;
+            margin-bottom:30px;
+        }
+
+        .card{
+            background: var(--bg-card);
+            padding:25px;
+            border-radius:15px;
+            box-shadow:0 5px 15px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h3{ margin-bottom:10px; color: var(--text-muted); }
+        .card p{ font-size:28px; font-weight:bold; }
+
+        .danger{ background:#fee2e2; }
+        .danger h3 { color: #991b1b; }
+        .danger p { color: #991b1b; }
+
+        .form-section {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        .form-inline { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
+        .form-group { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group.full-width { flex: 1 1 100%; }
+        .form-group label { font-size: 14px; font-weight: bold; color: var(--text-muted); }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+            background: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        .btn-submit {
+            padding: 10px 20px; background: #2563eb; color: white; border: none;
+            border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; height: 40px;
+        }
+        .btn-submit:hover { background: #1d4ed8; }
+        .btn-dispatch { background: #10b981; }
+        .btn-dispatch:hover { background: #059669; }
+        .btn-danger-action { background: #ef4444; }
+        .btn-danger-action:hover { background: #dc2626; }
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-delete:hover { background: #dc2626; }
+        .btn-view { background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-view:hover { background: #1d4ed8; }
+        .btn-back { background: #64748b; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 15px; }
+
+        .table-section{
+            background: var(--bg-card);
+            padding:20px;
+            border-radius:15px;
+            margin-bottom:30px;
+            box-shadow:0 5px 15px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        .table-section h2{ margin-bottom:20px; }
+        .table-section table{ width:100%; border-collapse:collapse; }
+        .table-section table th, .table-section table td{ padding:15px; border-bottom:1px solid var(--border-color); text-align:left; }
+        .table-section table th{ background: var(--table-header); color:white; }
+
+        .text-muted { font-size: 12px; color: var(--text-muted); }
+
+        .admin-only { display: block; }
+        body.user-role-active .admin-only { display: none !important; }
+
+        /* Delete button column hide for non-admin in franchise file table */
+        body.user-role-active .franchise-delete-col { display: none !important; }
+
+        @media(max-width:768px){
+            .container{ flex-direction:column; }
+            .sidebar{ width:100%; min-height:auto; position: relative; }
+            .main-content{ margin-left: 0; }
+            .topbar{ flex-direction:column; gap:15px; }
+            .topbar input{ width:100%; }
+            .form-inline { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <h2>System Login</h2>
+        <p>Apne account credentials se login karein.</p>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="loginUsername" placeholder="Enter Username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter Password" required>
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+            <div id="login-error">Invalid Username or Password!</div>
+        </form>
+    </div>
+</div>
+
+<div class="container" id="main-app" style="display: none;">
+
+    <div class="sidebar">
+        <div>
+            <h2>My Company</h2>
+            <div style="text-align: center;"><span class="sidebar-role-badge" id="user-role-indicator">Admin Panel</span></div>
+            <ul>
+                <li class="menu-item active" data-target="dashboard-page">Dashboard</li>
+                <li class="menu-item" data-target="inventory-page">Inventory</li>
+                <li class="menu-item" data-target="dispatch-page">Dispatch</li>
+                <li class="menu-item" data-target="franchise-page">Franchises</li>
+                <li class="menu-item" data-target="reports-page">Reports & PDF</li>
+                <li class="menu-item" data-target="settings-page">Settings</li>
+            </ul>
+        </div>
+        <button class="btn-logout" onclick="logoutSystem()">Logout 🚪</button>
+    </div>
+
+    <div class="main-content">
+
+        <div id="dashboard-page" class="page-view active-view">
+            <div class="topbar">
+                <h1>Main Dashboard Overview</h1>
+                <div class="topbar-actions">
+                    <button class="btn-theme-toggle" onclick="toggleTheme()">Toggle Dark Mode 🌙</button>
+                    <input type="text" class="global-search" placeholder="Search dashboard items...">
+                </div>
+            </div>
+
+            <div class="cards">
+                <div class="card">
+                    <h3>Total Stock</h3>
+                    <p class="lbl-total-stock">0</p>
+                </div>
+                <div class="card">
+                    <h3>Total Unique Items</h3>
+                    <p class="lbl-total-items">0</p>
+                </div>
+                <div class="card">
+                    <h3>Total Dispatched</h3>
+                    <p class="lbl-total-dispatch">0</p>
+                </div>
+                <div class="card danger">
+                    <h3>Low Stock Alerts</h3>
+                    <p class="lbl-low-stock">0</p>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <h2>Quick Stock Glance</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">Dashboard view provides an overview. Use dedicated sections for management.</p>
+            </div>
+        </div>
+
+        <div id="inventory-page" class="page-view">
+            <div class="topbar">
+                <h1>Inventory Stocks</h1>
+                <div class="topbar-actions">
+                    <button class="btn-theme-toggle" onclick="toggleTheme()">Toggle Dark Mode 🌙</button>
+                    <input type="text" class="global-search" placeholder="Search inventory list...">
+                </div>
+            </div>
+
+            <div class="form-section admin-only">
+                <h3>Add New Stock Entry</h3>
+                <form id="stockForm" class="form-inline">
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        <input type="text" id="stockName" placeholder="e.g., Laptop Dell" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Item Code</label>
+                        <input type="text" id="stockCode" placeholder="e.g., LP-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Total Quantity</label>
+                        <input type="number" id="stockQty" min="1" placeholder="e.g., 50" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Add Stock</button>
+                </form>
+            </div>
+
+            <div class="table-section" style="border: 2px solid #2563eb;">
+                <h2>Item-wise Stock Summary</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Item Code</th>
+                            <th>Added Date</th>
+                            <th>Total Stock</th>
+                            <th>Total Sent</th>
+                            <th style="background: #10b981; color: white;">Remaining</th>
+                            <th class="admin-only">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="render-inventory-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="dispatch-page" class="page-view">
+            <div class="topbar">
+                <h1>Stock Dispatch Tracking</h1>
+                <div class="topbar-actions">
+                    <button class="btn-theme-toggle" onclick="toggleTheme()">Toggle Dark Mode 🌙</button>
+                    <input type="text" class="global-search" placeholder="Search logs (By Name, Item, Location)...">
+                </div>
+            </div>
+
+            <div class="form-section admin-only">
+                <h3>Log Dispatch Entry</h3>
+                <form id="dispatchForm" class="form-inline">
+                    <div class="form-group">
+                        <label>Select Item</label>
+                        <select id="dispatchItemSelect" required>
+                            <option value="">-- Select Item --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Receiver Name</label>
+                        <input type="text" id="dispatchReceiverName" placeholder="e.g., Aslam / Ali" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Destination Location (Franchise)</label>
+                        <select id="dispatchLocationSelect" required>
+                            <option value="">-- Select Franchise --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dispatched Quantity</label>
+                        <input type="number" id="dispatchQty" min="1" placeholder="e.g., 5" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dispatch Date & Time</label>
+                        <input type="datetime-local" id="dispatchDateTime" required>
+                    </div>
+                    <button type="submit" class="btn-submit btn-dispatch">Log Dispatch</button>
+                </form>
+            </div>
+
+            <div class="table-section">
+                <h2>Dispatched Stock History Logs</h2>
+                <button class="btn-excel" onclick="exportTableToExcel('dispatch-history-table', 'All_Dispatch_History')">Export to Excel 📊</button>
+                <table id="dispatch-history-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Code</th>
+                            <th style="background: #eab308; color: #0f172a;">Receiver Name</th>
+                            <th>Sent To (Location)</th>
+                            <th>Dispatched Qty</th>
+                            <th>Dispatch Date & Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="render-dispatch-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="franchise-page" class="page-view">
+            <div class="topbar">
+                <h1>Registered Franchises & Offices</h1>
+                <button class="btn-theme-toggle" onclick="toggleTheme()">Toggle Dark Mode 🌙</button>
+            </div>
+
+            <!-- Add New Office Form: Sirf Admin ko dikhta hai -->
+            <div class="form-section admin-only" style="border: 2px solid #10b981;">
+                <h3 style="color: #10b981;">🏢 Naya Office / Franchise Add Karein</h3>
+                <form id="addFranchiseForm" class="form-inline">
+                    <div class="form-group">
+                        <label>Office / Franchise Name</label>
+                        <input type="text" id="newFranchiseName" placeholder="e.g., Mingora, Besham..." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Region</label>
+                        <input type="text" id="newFranchiseRegion" placeholder="e.g., KPK Region" value="KPK Region" required>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background: #10b981;">+ Add Office</button>
+                </form>
+            </div>
+            
+            <div id="franchise-main-list" class="table-section" style="border-left: 5px solid #2563eb;">
+                <h2>Active Operational Locations</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">Kisi bhi office ki mukammal file aur dispatch records dekhne ke liye <strong>View File 📂</strong> par click karein:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Serial No.</th>
+                            <th>Franchise / Office Name</th>
+                            <th>Region</th>
+                            <th>View File</th>
+                            <th class="admin-only" style="background: #ef4444;">Delete Office</th>
+                        </tr>
+                    </thead>
+                    <tbody id="render-franchise-list"></tbody>
+                </table>
+            </div>
+
+            <div id="franchise-individual-file" class="table-section" style="border-left: 5px solid #10b981; display: none;">
+                <button class="btn-back" onclick="showFranchiseMainList()">← Back to All Franchises</button>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 id="franchise-file-title">Office Dispatch File</h2>
+                    <button class="btn-excel" id="btn-export-franchise-file">Export Office File to Excel 📊</button>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">Is office ko bheje gaye saaman ki mukammal detail niche table me darj hain:</p>
+                <table id="franchise-specific-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Code</th>
+                            <th>Receiver Name</th>
+                            <th>Dispatched Qty</th>
+                            <th>Dispatch Date & Time</th>
+                            <!-- Admin-only Delete Column Header -->
+                            <th class="franchise-delete-col admin-only" style="background: #ef4444;">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="render-franchise-file-rows"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="reports-page" class="page-view">
+            <div class="topbar">
+                <h1>System Reports & PDF Exports</h1>
+                <button class="btn-theme-toggle" onclick="toggleTheme()">Toggle Dark Mode 🌙</button>
+            </div>
+
+            <div class="form-section" style="background: #eff6ff; color: #0f172a;">
+                <h3 style="color:#1e40af;">Generate Printable PDF Report</h3>
+                <p style="margin-bottom:15px; color:#475569;">Aap yahan se poore system ka snapshot ya to print kar sakte hain ya PDF save kar sakte hain.</p>
+                <button onclick="window.print()" class="btn-submit" style="background:#1e40af;">Print / Save as PDF 📄</button>
+            </div>
+
+            <div class="cards">
+                <div class="card" style="border-left: 5px solid #3b82f6;">
+                    <h3>Stock Value Scope</h3>
+                    <p style="font-size: 16px; font-weight: normal; margin-top: 10px; color: var(--text-muted);">Sare active status items system me automatic sync hain.</p>
+                </div>
+                <div class="card" style="border-left: 5px solid #10b981;">
+                    <h3>System Health</h3>
+                    <p style="font-size: 16px; font-weight: normal; margin-top: 10px; color: var(--text-muted);">No missing codes or broken thresholds detected.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-page" class="page-view">
+            <div class="topbar">
+                <h1>System Settings Panel</h1>
+                <button class="btn-theme-toggle" onclick="toggleTheme()">Toggle Dark Mode 🌙</button>
+            </div>
+
+            <!-- Dono password sections sirf Admin ko dikhte hain -->
+            <div class="form-section admin-only" style="border: 2px solid #2563eb;">
+                <h3 style="color: #2563eb;">🔐 Admin Account — Username & Password Change</h3>
+                <p style="color: var(--text-muted); font-size:13px; margin-bottom:15px;">Admin login ka username aur password yahan se badlein:</p>
+                <form id="adminCredForm" class="form-inline">
+                    <div class="form-group">
+                        <label>Admin New Username</label>
+                        <input type="text" id="adminNewUsername" placeholder="Admin username..." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Admin New Password</label>
+                        <input type="password" id="adminNewPassword" placeholder="Admin password..." required>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background: #2563eb;">Update Admin Login 🔒</button>
+                </form>
+            </div>
+
+            <div class="form-section admin-only" style="border: 2px solid #10b981;">
+                <h3 style="color: #10b981;">👤 User Account — Username & Password Change</h3>
+                <p style="color: var(--text-muted); font-size:13px; margin-bottom:15px;">
+                    Sirf Admin yahan se <strong>User (Viewer)</strong> account ka username aur password set kar sakta hai:
+                </p>
+                <form id="userCredForm" class="form-inline">
+                    <div class="form-group">
+                        <label>User New Username</label>
+                        <input type="text" id="userNewUsername" placeholder="User username..." required>
+                    </div>
+                    <div class="form-group">
+                        <label>User New Password</label>
+                        <input type="password" id="userNewPassword" placeholder="User password..." required>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background: #10b981;">Update User Login 🔒</button>
+                </form>
+            </div>
+
+            <div class="form-section admin-only">
+                <h3>Company Profile Settings</h3>
+                <form id="settingsForm" class="form-inline" style="align-items: stretch; flex-direction: column;">
+                    <div class="form-group">
+                        <label>Company Name</label>
+                        <input type="text" id="cfgCompanyName" value="My Company">
+                    </div>
+                    <div class="form-group">
+                        <label>Low Stock Warning Limit Threshold</label>
+                        <input type="number" id="cfgStockThreshold" value="5" min="1">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>System Description Notes (For Print/Reports footer)</label>
+                        <textarea id="cfgSystemNotes" rows="3" placeholder="Enter notes here..."></textarea>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn-submit">Save Settings Configurations</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-section admin-only" style="border: 1px solid #fca5a5; background: #fff5f5; color: #0f172a;">
+                <h3 style="color: #c53030;">Danger Control Zone</h3>
+                <p style="margin-bottom:15px; color:#742a2a; font-size:14px;">Do you want to wipe and reset all system data?</p>
+                <button onclick="dangerResetSystem()" class="btn-submit btn-danger-action">Wipe & Reset All System Data</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let adminUser = localStorage.getItem('cred_admin_user') || 'admin';
+    let adminPass = localStorage.getItem('cred_admin_pass') || 'admin123';
+    let normalUser = localStorage.getItem('cred_user_user') || 'user';
+    let normalPass = localStorage.getItem('cred_user_pass') || 'user123';
+
+    let currentOfficeView = "";
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const userInputField = document.getElementById('loginUsername');
+        const passInputField = document.getElementById('loginPassword');
+        const user = userInputField.value.trim();
+        const pass = passInputField.value;
+
+        if(user === adminUser && pass === adminPass) {
+            sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('userRole', 'admin');
+            userInputField.value = "";
+            passInputField.value = "";
+            checkLoginState();
+        } else if(user === normalUser && pass === normalPass) {
+            sessionStorage.setItem('isLoggedIn', 'true');
+            sessionStorage.setItem('userRole', 'user');
+            userInputField.value = "";
+            passInputField.value = "";
+            checkLoginState();
+        } else {
+            passInputField.value = "";
+            const err = document.getElementById('login-error');
+            err.style.display = 'block';
+            setTimeout(() => err.style.display = 'none', 3000);
+        }
+    });
+
+    function checkLoginState() {
+        const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+        const role = sessionStorage.getItem('userRole') || 'user';
+
+        if(isLoggedIn) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'flex';
+            
+            const badge = document.getElementById('user-role-indicator');
+            
+            if(role === 'admin') {
+                document.body.classList.remove('user-role-active');
+                badge.innerText = "Admin Panel";
+                badge.style.background = "#2563eb";
+                document.getElementById('adminNewUsername').value = adminUser;
+                document.getElementById('adminNewPassword').value = adminPass;
+                document.getElementById('userNewUsername').value = normalUser;
+                document.getElementById('userNewPassword').value = normalPass;
+            } else {
+                document.body.classList.add('user-role-active');
+                badge.innerText = "Viewer Mode (Read-Only)";
+                badge.style.background = "#64748b";
+                // User ke liye password fields hidden hain, koi prefill nahi
+            }
+            renderDashboard();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('main-app').style.display = 'none';
+        }
+    }
+
+    // --- Admin apna khud ka account update kare ---
+    document.getElementById('adminCredForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const role = sessionStorage.getItem('userRole') || 'user';
+        const updatedUser = document.getElementById('adminNewUsername').value.trim();
+        const updatedPass = document.getElementById('adminNewPassword').value;
+
+        if(!updatedUser || !updatedPass) return alert("Username aur Password khali nahi ho sakte!");
+
+        if(role === 'admin') {
+            // Admin apna account update kar raha hai
+            adminUser = updatedUser;
+            adminPass = updatedPass;
+            localStorage.setItem('cred_admin_user', adminUser);
+            localStorage.setItem('cred_admin_pass', adminPass);
+            alert("✅ Admin login credentials update ho gaye! Agli login mein naye credentials use karein.");
+        } else {
+            // Normal user apna account update kar raha hai
+            normalUser = updatedUser;
+            normalPass = updatedPass;
+            localStorage.setItem('cred_user_user', normalUser);
+            localStorage.setItem('cred_user_pass', normalPass);
+            alert("✅ User login credentials update ho gaye! Agli login mein naye credentials use karein.");
+        }
+    });
+
+    // --- Admin sirf: User account update kare (Admin-only) ---
+    document.getElementById('userCredForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized! Sirf Admin user credentials badal sakta hai.");
+
+        const updatedUser = document.getElementById('userNewUsername').value.trim();
+        const updatedPass = document.getElementById('userNewPassword').value;
+
+        if(!updatedUser || !updatedPass) return alert("Username aur Password khali nahi ho sakte!");
+
+        normalUser = updatedUser;
+        normalPass = updatedPass;
+        localStorage.setItem('cred_user_user', normalUser);
+        localStorage.setItem('cred_user_pass', normalPass);
+        alert(`✅ User (Viewer) account update ho gaya!\nUsername: ${normalUser}\nAb user naye credentials se login karega.`);
+    });
+
+    function logoutSystem() {
+        sessionStorage.removeItem('isLoggedIn');
+        sessionStorage.removeItem('userRole');
+        checkLoginState();
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', targetTheme);
+        localStorage.setItem('theme', targetTheme);
+        updateThemeButtonText(targetTheme);
+    }
+
+    function updateThemeButtonText(theme) {
+        document.querySelectorAll('.btn-theme-toggle').forEach(btn => {
+            btn.innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        });
+    }
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeButtonText(savedTheme);
+
+    function exportTableToExcel(tableID, filename = '') {
+        var downloadLink;
+        var dataType = 'application/vnd.ms-excel';
+        var tableSelect = document.getElementById(tableID);
+        var tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
+        filename = filename ? filename + '.xls' : 'excel_data.xls';
+        downloadLink = document.createElement("a");
+        document.body.appendChild(downloadLink);
+        if(navigator.msSaveOrOpenBlob){
+            var blob = new Blob(['\ufeff' + tableHTML], { type: dataType });
+            navigator.msSaveOrOpenBlob(blob, filename);
+        } else {
+            downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+            downloadLink.download = filename;
+            downloadLink.click();
+        }
+    }
+
+    function getTodayDateString() {
+        const today = new Date();
+        return today.toLocaleDateString('en-GB');
+    }
+
+    function setInitialDispatchDateTime() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        const dateTimeInput = document.getElementById('dispatchDateTime');
+        if(dateTimeInput) dateTimeInput.value = now.toISOString().slice(0, 16);
+    }
+
+    const menuItems = document.querySelectorAll('.sidebar .menu-item');
+    const pageViews = document.querySelectorAll('.page-view');
+
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            menuItems.forEach(i => i.classList.remove('active'));
+            pageViews.forEach(p => p.classList.remove('active-view'));
+            item.classList.add('active');
+            const targetId = item.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active-view');
+            if(targetId === 'franchise-page') {
+                showFranchiseMainList();
+            }
+        });
+    });
+
+    const defaultInventory = [
+        { name: "Laptop Dell Inspiron", code: "LP-001", totalQty: 50, sentQty: 15, dateAdded: "10/05/2026" },
+        { name: "Wireless Mouse", code: "MS-002", totalQty: 200, sentQty: 120, dateAdded: "12/05/2026" },
+        { name: "Mechanical Keyboard", code: "KB-003", totalQty: 15, sentQty: 12, dateAdded: "14/05/2026" }
+    ];
+
+    const defaultDispatches = [
+        { name: "Wireless Mouse", code: "MS-002", receiver: "Aslam Khan", location: "Swat", qty: 50, dateTime: "15/05/2026, 02:30 PM" },
+        { name: "Wireless Mouse", code: "MS-002", receiver: "Irfan Ali", location: "Khwazakhela", qty: 70, dateTime: "16/05/2026, 11:15 AM" },
+        { name: "Laptop Dell Inspiron", code: "LP-001", receiver: "Kamran Ahmed", location: "Odigram", qty: 15, dateTime: "17/05/2026, 04:45 PM" }
+    ];
+
+    const defaultFranchiseLocations = [
+        { name: "Odigram", region: "KPK Region" },
+        
+    ];
+
+    let franchiseList = JSON.parse(localStorage.getItem('franchise_list')) || defaultFranchiseLocations;
+
+    function getFranchiseNames() {
+        return franchiseList.map(f => f.name);
+    }
+
+    function saveFranchiseList() {
+        localStorage.setItem('franchise_list', JSON.stringify(franchiseList));
+    }
+
+    let inventoryData = JSON.parse(localStorage.getItem('inventory')) || defaultInventory;
+    let dispatchData = JSON.parse(localStorage.getItem('dispatches')) || defaultDispatches;
+    
+    let systemThreshold = parseInt(localStorage.getItem('cfg_threshold')) || 5;
+    let companyName = localStorage.getItem('cfg_comp_name') || "My Company";
+    let systemNotes = localStorage.getItem('cfg_notes') || "";
+
+    document.querySelector('.sidebar h2').innerText = companyName;
+    document.getElementById('cfgCompanyName').value = companyName;
+    document.getElementById('cfgStockThreshold').value = systemThreshold;
+    document.getElementById('cfgSystemNotes').value = systemNotes;
+
+    function saveToLocalStorage() {
+        localStorage.setItem('inventory', JSON.stringify(inventoryData));
+        localStorage.setItem('dispatches', JSON.stringify(dispatchData));
+    }
+
+    function updateItemDropdown() {
+        const selectMenu = document.getElementById('dispatchItemSelect');
+        if(!selectMenu) return;
+        selectMenu.innerHTML = '<option value="">-- Select Item --</option>';
+        inventoryData.forEach(item => {
+            selectMenu.innerHTML += `<option value="${item.code}">${item.name} (${item.code})</option>`;
+        });
+    }
+
+    function initializeFranchiseSystem() {
+        const locSelect = document.getElementById('dispatchLocationSelect');
+        const franchiseTableBody = document.getElementById('render-franchise-list');
+        const currentRole = sessionStorage.getItem('userRole') || 'user';
+        
+        if(locSelect) {
+            locSelect.innerHTML = '<option value="">-- Select Franchise --</option>';
+            franchiseList.forEach(f => {
+                locSelect.innerHTML += `<option value="${f.name}">${f.name}</option>`;
+            });
+        }
+
+        if(franchiseTableBody) {
+            franchiseTableBody.innerHTML = '';
+            franchiseList.forEach((f, index) => {
+                const deleteBtn = currentRole === 'admin'
+                    ? `<td class="admin-only">
+                           <button class="btn-delete" onclick="deleteFranchiseOffice(${index})">🗑️ Delete</button>
+                       </td>`
+                    : `<td class="admin-only"></td>`;
+
+                franchiseTableBody.innerHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${f.name}</strong></td>
+                        <td>${f.region}</td>
+                        <td>
+                            <button class="btn-view" onclick="openFranchiseFile('${f.name}')">View File 📂</button>
+                        </td>
+                        ${deleteBtn}
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    // --- Naya Office Add Karna ---
+    document.getElementById('addFranchiseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+
+        const newName = document.getElementById('newFranchiseName').value.trim();
+        const newRegion = document.getElementById('newFranchiseRegion').value.trim() || 'KPK Region';
+
+        // Duplicate check
+        const alreadyExists = franchiseList.some(f => f.name.toLowerCase() === newName.toLowerCase());
+        if(alreadyExists) {
+            alert(`"${newName}" pehle se system mein maujood hai!`);
+            return;
+        }
+
+        franchiseList.push({ name: newName, region: newRegion });
+        saveFranchiseList();
+        initializeFranchiseSystem();
+        this.reset();
+        document.getElementById('newFranchiseRegion').value = 'KPK Region';
+        alert(`✅ "${newName}" successfully add ho gaya!`);
+    });
+
+    // --- Office Delete Karna ---
+    window.deleteFranchiseOffice = function(index) {
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+
+        const officeName = franchiseList[index].name;
+        const hasRecords = dispatchData.some(d => d.location.toLowerCase() === officeName.toLowerCase());
+
+        let confirmMsg = `Kya aap "${officeName}" office ko delete karna chahte hain?`;
+        if(hasRecords) {
+            confirmMsg += `\n\n⚠️ WARNING: Is office ke dispatch records bhi system mein hain. Office delete hone se records nahi hatenge lekin dispatch dropdown se yeh hatega.`;
+        }
+
+        if(confirm(confirmMsg)) {
+            franchiseList.splice(index, 1);
+            saveFranchiseList();
+            initializeFranchiseSystem();
+            alert(`✅ "${officeName}" office delete ho gaya!`);
+        }
+    }
+
+    // =============================================
+    // FRANCHISE FILE: DELETE DISPATCH ENTRY FUNCTION
+    // Yeh function ek specific dispatch entry ko
+    // dispatchData array se hata deta hai
+    // =============================================
+    window.deleteFranchiseDispatch = function(globalDispatchIndex) {
+        if(sessionStorage.getItem('userRole') !== 'admin') {
+            return alert("Unauthorized! Sirf Admin delete kar sakta hai.");
+        }
+
+        if(confirm("Kya aap is dispatch record ko delete karna chahte hain? Yeh wapas nahi ho ga.")) {
+            // Inventory mein sentQty wapas update karo (stock restore)
+            const deletedEntry = dispatchData[globalDispatchIndex];
+            const inventoryItem = inventoryData.find(i => i.code === deletedEntry.code);
+            if(inventoryItem) {
+                inventoryItem.sentQty -= deletedEntry.qty;
+                if(inventoryItem.sentQty < 0) inventoryItem.sentQty = 0;
+            }
+
+            // Dispatch array se record hataao
+            dispatchData.splice(globalDispatchIndex, 1);
+
+            saveToLocalStorage();
+            renderDashboard();
+
+            // File view reload karein
+            openFranchiseFile(currentOfficeView);
+        }
+    }
+
+    window.openFranchiseFile = function(locationName) {
+        currentOfficeView = locationName;
+        document.getElementById('franchise-main-list').style.display = 'none';
+        const fileSection = document.getElementById('franchise-individual-file');
+        fileSection.style.display = 'block';
+
+        document.getElementById('franchise-file-title').innerText = `🏢 Office Dispatch File: ${locationName}`;
+        
+        document.getElementById('btn-export-franchise-file').onclick = function() {
+            exportTableToExcel('franchise-specific-table', `Dispatch_Report_${locationName}`);
+        };
+
+        const fileRowsContainer = document.getElementById('render-franchise-file-rows');
+        fileRowsContainer.innerHTML = '';
+
+        const currentRole = sessionStorage.getItem('userRole') || 'user';
+
+        // Is office ke dispatch records filter karo aur unka global index bhi rakho
+        const officeRecords = dispatchData
+            .map((disp, globalIndex) => ({ ...disp, globalIndex }))
+            .filter(disp => disp.location.toLowerCase() === locationName.toLowerCase());
+
+        if(officeRecords.length === 0) {
+            fileRowsContainer.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Is office ko abhi tak koi saaman bheja nahi gaya.</td></tr>`;
+        } else {
+            officeRecords.forEach(rec => {
+                // Delete button sirf admin ko dikhao
+                const deleteCell = currentRole === 'admin'
+                    ? `<td class="franchise-delete-col admin-only">
+                          <button class="btn-delete" onclick="deleteFranchiseDispatch(${rec.globalIndex})" title="Is record ko delete karein">
+                              🗑️ Delete
+                          </button>
+                       </td>`
+                    : `<td class="franchise-delete-col admin-only"></td>`;
+
+                fileRowsContainer.innerHTML += `
+                    <tr>
+                        <td><strong>${rec.name}</strong></td>
+                        <td>${rec.code}</td>
+                        <td style="color:#1e3a8a; font-weight:bold;">${rec.receiver || 'N/A'}</td>
+                        <td><span style="background:#dcfce7; padding:4px 8px; border-radius:4px; font-weight:bold; color:#15803d;">${rec.qty}</span></td>
+                        <td><span class="text-muted">${rec.dateTime || 'N/A'}</span></td>
+                        ${deleteCell}
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    window.showFranchiseMainList = function() {
+        document.getElementById('franchise-individual-file').style.display = 'none';
+        document.getElementById('franchise-main-list').style.display = 'block';
+    }
+
+    function renderDashboard(searchTerm = "") {
+        const inventoryBodies = document.querySelectorAll('.render-inventory-table');
+        const dispatchBodies = document.querySelectorAll('.render-dispatch-table');
+
+        inventoryBodies.forEach(b => b.innerHTML = "");
+        dispatchBodies.forEach(b => b.innerHTML = "");
+
+        let overallRemainingStock = 0;
+        let overallSentStock = 0;
+        let lowStockCount = 0;
+        
+        const currentRole = sessionStorage.getItem('userRole') || 'user';
+
+        inventoryData.forEach((item, index) => {
+            const remaining = item.totalQty - item.sentQty;
+            overallRemainingStock += remaining;
+            overallSentStock += item.sentQty;
+            if (remaining <= systemThreshold) { lowStockCount++; }
+
+            const searchLower = searchTerm.toLowerCase();
+            if (item.name.toLowerCase().includes(searchLower) || item.code.toLowerCase().includes(searchLower)) {
+                const actionCell = currentRole === 'admin'
+                    ? `<td><button class="btn-delete" onclick="deleteStockItem(${index})">Delete</button></td>`
+                    : `<td class="admin-only"></td>`;
+
+                const row = `
+                    <tr>
+                        <td><strong>${item.name}</strong></td>
+                        <td>${item.code}</td>
+                        <td><span class="text-muted">${item.dateAdded || 'N/A'}</span></td>
+                        <td>${item.totalQty}</td>
+                        <td>${item.sentQty}</td>
+                        <td style="background: #e6f4ea; font-weight: bold; color: ${remaining <= systemThreshold ? 'red' : '#10b981'};">
+                            ${remaining} ${remaining <= systemThreshold ? '⚠️' : ''}
+                        </td>
+                        ${actionCell}
+                    </tr>
+                `;
+                inventoryBodies.forEach(b => b.innerHTML += row);
+            }
+        });
+
+        dispatchData.forEach((disp) => {
+            const searchLower = searchTerm.toLowerCase();
+            const receiverName = disp.receiver || "N/A";
+            if (disp.name.toLowerCase().includes(searchLower) ||
+                disp.code.toLowerCase().includes(searchLower) ||
+                disp.location.toLowerCase().includes(searchLower) ||
+                receiverName.toLowerCase().includes(searchLower)) {
+                
+                const row = `
+                    <tr>
+                        <td><strong>${disp.name}</strong></td>
+                        <td>${disp.code}</td>
+                        <td style="color:#1e3a8a; font-weight:bold; background:#fef08a;">${receiverName}</td>
+                        <td>${disp.location}</td>
+                        <td>${disp.qty}</td>
+                        <td><span class="text-muted">${disp.dateTime || 'N/A'}</span></td>
+                    </tr>
+                `;
+                dispatchBodies.forEach(b => b.innerHTML += row);
+            }
+        });
+
+        document.querySelectorAll('.lbl-total-stock').forEach(el => el.innerText = overallRemainingStock);
+        document.querySelectorAll('.lbl-total-items').forEach(el => el.innerText = inventoryData.length);
+        document.querySelectorAll('.lbl-total-dispatch').forEach(el => el.innerText = overallSentStock);
+        document.querySelectorAll('.lbl-low-stock').forEach(el => el.innerText = lowStockCount);
+    }
+
+    document.getElementById('stockForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+        
+        const name = document.getElementById('stockName').value.trim();
+        const code = document.getElementById('stockCode').value.trim().toUpperCase();
+        const qty = parseInt(document.getElementById('stockQty').value);
+        const currentDate = getTodayDateString();
+
+        const existingItem = inventoryData.find(item => item.code === code);
+        if(existingItem) {
+            existingItem.totalQty += qty;
+            existingItem.dateAdded = currentDate;
+        } else {
+            inventoryData.push({ name: name, code: code, totalQty: qty, sentQty: 0, dateAdded: currentDate });
+        }
+
+        saveToLocalStorage();
+        updateItemDropdown();
+        renderDashboard();
+        this.reset();
+    });
+
+    document.getElementById('dispatchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+
+        const selectedCode = document.getElementById('dispatchItemSelect').value;
+        const receiver = document.getElementById('dispatchReceiverName').value.trim();
+        const location = document.getElementById('dispatchLocationSelect').value;
+        const qtyToDispatch = parseInt(document.getElementById('dispatchQty').value);
+        const rawDateTime = document.getElementById('dispatchDateTime').value;
+
+        const formattedDateObj = new Date(rawDateTime);
+        const formattedDateTime = formattedDateObj.toLocaleDateString('en-GB') + ', ' +
+                                  formattedDateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+        const item = inventoryData.find(i => i.code === selectedCode);
+        if(item) {
+            const remaining = item.totalQty - item.sentQty;
+            if(qtyToDispatch > remaining) {
+                alert(`Error: Not enough stock available! Only ${remaining} items left.`);
+                return;
+            }
+            item.sentQty += qtyToDispatch;
+            dispatchData.push({
+                name: item.name,
+                code: item.code,
+                receiver: receiver,
+                location: location,
+                qty: qtyToDispatch,
+                dateTime: formattedDateTime
+            });
+
+            saveToLocalStorage();
+            renderDashboard();
+            this.reset();
+            setInitialDispatchDateTime();
+        }
+    });
+
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+
+        companyName = document.getElementById('cfgCompanyName').value.trim();
+        systemThreshold = parseInt(document.getElementById('cfgStockThreshold').value) || 5;
+        systemNotes = document.getElementById('cfgSystemNotes').value;
+
+        localStorage.setItem('cfg_comp_name', companyName);
+        localStorage.setItem('cfg_threshold', systemThreshold);
+        localStorage.setItem('cfg_notes', systemNotes);
+
+        document.querySelector('.sidebar h2').innerText = companyName;
+        alert("Configuration saved successfully!");
+        renderDashboard();
+    });
+
+    window.deleteStockItem = function(index) {
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+        
+        if(confirm("Are you sure you want to delete this item?")) {
+            const itemToDelete = inventoryData[index];
+            dispatchData = dispatchData.filter(disp => disp.code !== itemToDelete.code);
+            inventoryData.splice(index, 1);
+            saveToLocalStorage();
+            updateItemDropdown();
+            renderDashboard();
+        }
+    }
+
+    function dangerResetSystem() {
+        if(sessionStorage.getItem('userRole') !== 'admin') return alert("Unauthorized access!");
+        
+        if(confirm("WARNING! Completely wipe database and reset settings? This cannot be undone.")) {
+            // franchise_list bhi reset hogi default par
+            localStorage.clear();
+            sessionStorage.clear();
+            location.reload();
+        }
+    }
+
+    document.querySelectorAll('.global-search').forEach(inputField => {
+        inputField.addEventListener('input', (e) => {
+            renderDashboard(e.target.value);
+        });
+    });
+
+    checkLoginState();
+    updateItemDropdown();
+    initializeFranchiseSystem();
+    setInitialDispatchDateTime();
+    renderDashboard();
+</script>
+
+</body>
+</html>
